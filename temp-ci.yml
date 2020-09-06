@@ -27,12 +27,27 @@ release:
   tags:
     - FRONTEND
   variables:
-     REGISTRY_URL: 
+     REGISTRY_URL: reg.
   dependencies:
     - build
   image: docker:dind
-  before_script: 
-    - echo -en "FROM nginx \nWORKDIR /usr/share/nginx/html\nADD  /builds/front-end/huami-frontend/dist/* ./ " > nginx
+  before_script:  
+    - echo -en "FROM nginx \nWORKDIR /usr/share/nginx/html\nCOPY ./dist/* ./ " > nginx
   script: 
-     - docker build -f nginx -t $NEW .
-     - docker info
+     - docker build -f nginx -t $REGISTRY_URL .
+     - docker push $REGISTRY_URL
+deploy_dev_whoami_frontend:
+  stage: deploy
+  tags:
+    - FRONTEND
+  variables:
+     REGISTRY_URL: reg.
+  image: /devops/basecd
+  before_script:
+    - ssh dev0@172.16.120.101 "docker rmi -f whoami_frontend"  || true
+    - echo -en "\n\n YOUR ADDRESS! dev_whoami. \n\n"
+  script:
+    #test
+    - ssh dev0@172.16.120.101 "docker pull $REGISTRY_URL && docker tag $REGISTRY_URL whoami_frontend && echo $? "
+    - ssh dev0@172.16.120.101 "docker run  --name whoami_frontend -p 8085:80  $REGISTRY_URL &  "
+    - ssh dev0@172.16.120.101 "sleep 3 && curl 172.16.120.101:8085 " || true
