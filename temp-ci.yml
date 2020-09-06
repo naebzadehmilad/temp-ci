@@ -1,0 +1,38 @@
+image: node:lts-alpine
+cache:
+  key: '$CI_COMMIT_REF_NAME'
+stages:
+    - build
+    - release
+    - deploy
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://172.16.120.101:2375 
+  DOCKER_TLS_CERTDIR: ""
+
+build:
+  stage: build
+  tags: 
+    - FRONTEND
+  script:
+     - npm install -g http-server 
+     - npm install 
+     - npm run-script build
+  artifacts:
+    paths:
+      - /builds/front-end/huami-frontend/dist
+
+release:
+  stage: release 
+  tags:
+    - FRONTEND
+  variables:
+     REGISTRY_URL: 
+  dependencies:
+    - build
+  image: docker:dind
+  before_script: 
+    - echo -en "FROM nginx \nWORKDIR /usr/share/nginx/html\nADD  /builds/front-end/huami-frontend/dist/* ./ " > nginx
+  script: 
+     - docker build -f nginx -t $NEW .
+     - docker info
